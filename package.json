@@ -1,0 +1,21 @@
+{
+  "name": "per-campo-pwa",
+  "version": "1.0.0",
+  "description": "Flores El Trigal - PER Campo PWA",
+  "scripts": {
+    "serve": "npx http-server",
+    "dev": "npx http-server -p 8000 -c-1",
+    "test-pwa": "npm run dev"
+  },
+  "keywords": [
+    "pwa",
+    "flores",
+    "trigal",
+    "per",
+    "pronosticador",
+    "app"
+  ],
+  "author": "Flores El Trigal",
+  "license": "MIT",
+  "devDependencies": {}
+}
