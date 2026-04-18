@@ -1470,7 +1470,7 @@
 
     function debounceBuscaVariedad() {
       clearTimeout(timeoutBuscaVariedad)
-      timeoutBuscaVariedad = setTimeout(() => renderTablaVariedades(), 150)
+      timeoutBuscaVariedad = setTimeout(() => buscarYMostrarVariedades(), 150)
     }
 
     function actualizarEstado() {
@@ -3423,8 +3423,8 @@
     }
 
     function cargarVariedadEnFormulario(nomFlor, producto) {
-      const param = PARAMETROS_DATA.find(p => p.nom_flor === nomFlor && p.producto === producto)
-      const aprov = APROVECHAMIENTOS_DATA.find(a => a.nom_flor === nomFlor && a.producto === producto)
+      const param = PARAMETROS_DATA.find(p => normalizarTextoMemo(p.nom_flor) === normalizarTextoMemo(nomFlor) && normalizarTextoMemo(p.producto) === normalizarTextoMemo(producto))
+      const aprov = APROVECHAMIENTOS_DATA.find(a => normalizarTextoMemo(a.nom_flor) === normalizarTextoMemo(nomFlor) && normalizarTextoMemo(a.producto) === normalizarTextoMemo(producto))
 
       document.getElementById('editNomFlor').value = nomFlor
       document.getElementById('editNomFlor').readOnly = true
