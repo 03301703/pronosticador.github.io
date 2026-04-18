@@ -4,9 +4,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1a4a8c">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>Flores El Trigal - PER - Campo</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
@@ -1074,6 +1071,37 @@
 
   <!--                                TAB 1: CARGAR                                -->
   <div class="tab-content active" id="panelCargar">
+    <!-- Card de Estado -->
+    <div class="card" style="background:linear-gradient(135deg, #edf2fb 0%, #f0f4f8 100%); border:2px solid #5b8dd9;">
+      <div class="card-title" style="color:#1a4a8c; margin-bottom:16px;">Estado de Carga</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div style="background:white; padding:12px; border-radius:8px; border-left:4px solid #ef4444;">
+          <div style="font-size:12px; color:#666; margin-bottom:4px;">Siembras</div>
+          <div style="font-size:20px; font-weight:bold; color:#1a4a8c;">
+            <span id="estadoSiembras" style="color:#ef4444;"></span>
+            <span id="countSiembras">0</span> registros
+          </div>
+          <button class="btn btn-sm" style="margin-top:8px; padding:4px 8px; font-size:11px; background:#1a4a8c; color:#fff; border:none; border-radius:4px; cursor:pointer; width:100%;" onclick="document.getElementById('siembrasFile').click()">Cargar</button>
+        </div>
+        <div style="background:white; padding:12px; border-radius:8px; border-left:4px solid #f59e0b;">
+          <div style="font-size:12px; color:#666; margin-bottom:4px;">Plan Finca (Opcional)</div>
+          <div style="font-size:20px; font-weight:bold; color:#1a4a8c;">
+            <span id="estadoPlanFinca" style="color:#f59e0b;"></span>
+            <span id="statusPlanFinca">No cargado</span>
+          </div>
+          <button class="btn btn-sm" style="margin-top:8px; padding:4px 8px; font-size:11px; background:#1a4a8c; color:#fff; border:none; border-radius:4px; cursor:pointer; width:100%;" onclick="document.getElementById('planFincaFile').click()">Cargar</button>
+        </div>
+        <div style="background:white; padding:12px; border-radius:8px; border-left:4px solid #22c55e; grid-column:1/-1;">
+          <div style="font-size:12px; color:#666; margin-bottom:4px;">Variedades con Parámetros</div>
+          <div style="font-size:20px; font-weight:bold; color:#1a4a8c;">
+            <span style="color:#22c55e;"></span>
+            <span id="countVariedades">0</span> variedades
+          </div>
+          <button class="btn btn-sm" style="margin-top:8px; padding:4px 8px; font-size:11px; background:#1a4a8c; color:#fff; border:none; border-radius:4px; cursor:pointer; width:100%;" onclick="abrirModalVariedades()">Editar Catálogo</button>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">Archivos de datos</div>
       <div class="form-grid">
@@ -1094,7 +1122,6 @@
       <div class="btn-row">
         <button class="btn btn-primary" onclick="unificar()">Cargar Informacion</button>
         <button class="btn btn-secondary" onclick="exportarUnificado()">Descargar Tabla</button>
-        <button class="btn btn-secondary" onclick="abrirModalVariedades()">Gestionar Variedades</button>
         <button class="btn btn-danger" onclick="limpiarSesion()">Limpiar sesion</button>
       </div>
     </div>
@@ -1294,9 +1321,9 @@
       <div class="card-title">Busqueda</div>
       <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
         <div class="form-group"><label>Variedad</label><input type="text" id="busquedaHistorial" placeholder="Buscar..."
-            oninput="generarHistorial()"></div>
+            oninput="debounceGenerarHistorial()"></div>
         <div class="form-group"><label>Color</label><input type="text" id="busquedaColor" placeholder="Buscar..."
-            oninput="generarHistorial()"></div>
+            oninput="debounceGenerarHistorial()"></div>
         <div class="form-group"><label>Producto</label>
           <div class="multi-select" id="multiProductoHistorial">
             <div class="multi-select-bar" onclick="toggleMultiSelectHistorial()">Todos</div>
@@ -1307,7 +1334,7 @@
       <div class="btn-row">
         <button class="btn btn-primary" onclick="exportarHistorial()">Descargar Historial</button>
         <button class="btn btn-secondary" onclick="togglePlanFinca()" id="btnToggleFinca">Ocultar Plan Finca</button>
-        <button class="btn btn-secondary" onclick="togglePronostico()" id="btnTogglePronostico">Ocultar Pronostico
+        <button class="btn btn-secondary" onclick="togglePronostico()" id="btnTogglePronostico">Ocultar Pronóstico
           MJ</button>
       </div>
       <!-- Badge de estado Plan Finca -->
@@ -1340,51 +1367,59 @@
     </div>
   </div>
 
-  <!-- Modal Gestión de Variedades -->
-  <div class="modal-overlay" id="modalVariedades" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
-    <div style="background:white;border-radius:8px;width:90%;max-width:600px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-height:80vh;overflow-y:auto;">
-      <div style="font-size:20px;font-weight:bold;margin-bottom:16px;color:#1a4a8c;">Gestión de Variedades</div>
+  <!-- Modal Editar Catálogo -->
+  <div class="modal-overlay" id="modalVariedades" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;overflow:auto;" onclick="cerrarModalVariedades()">
+    <div style="background:white;border-radius:8px;width:95%;max-width:500px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.15);margin:20px auto;" onclick="event.stopPropagation()">
+      <div style="font-size:18px;font-weight:bold;margin-bottom:16px;color:#1a4a8c;">Editar Variedad</div>
 
-      <div style="margin-bottom:16px;">
-        <div style="font-size:14px;font-weight:bold;color:#2c60a8;margin-bottom:8px;">Catálogo de Variedades</div>
-        <input type="text" id="buscarVariedad" placeholder="Buscar variedad..." oninput="renderListadoVariedades()"
-          style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:6px;margin-bottom:6px;box-sizing:border-box;font-size:13px;">
-        <div id="listadoVariedades" style="max-height:200px;overflow-y:auto;border:1px solid #eee;border-radius:6px;background:#fafafa;"></div>
-      </div>
+      <!-- Buscador -->
+      <input type="text" id="buscarVariedad" placeholder="Escribir nombre de variedad..." oninput="debounceBuscaVariedad()"
+        style="width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;margin-bottom:12px;box-sizing:border-box;font-size:13px;">
 
-      <!-- Sección Parámetros -->
-      <div style="margin-bottom:24px;">
-        <div style="font-size:14px;font-weight:bold;color:#2c60a8;margin-bottom:8px;">Parámetros de Variedad</div>
-        <div style="font-size:12px;color:#666;margin-bottom:12px;background:#f0f4f8;padding:8px;border-radius:4px;">
-          💡 Nombre debe coincidir exactamente con el de la siembra (ej: "Potomac Orange")
+      <!-- Listado dinámico de variedades encontradas -->
+      <div id="listadoVariedades" style="max-height:200px;overflow-y:auto;border:1px solid #ddd;border-radius:6px;margin-bottom:16px;background:#fafafa;"></div>
+
+      <!-- Formulario editable -->
+      <div id="formularioVariedad" style="display:none;background:#f9f9f9;padding:16px;border-radius:6px;margin-bottom:16px;border:2px solid #1a4a8c;">
+        <div style="font-size:13px;font-weight:bold;color:#1a4a8c;margin-bottom:12px;" id="tituloFormulario">Editar Variedad</div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:#666;">Variedad:</label>
+          <input type="text" id="editNomFlor" placeholder="Ej: Potomac Orange, Explorer Red" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:#666;">Producto:</label>
+          <input type="text" id="editProducto" placeholder="Ej: SN, SNCUT, LD" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-          <input type="text" id="paramNomFlor" placeholder="ej: Potomac Orange" style="padding:8px;border:1px solid #ccc;border-radius:4px;">
-          <input type="text" id="paramProducto" placeholder="ej: SN" style="padding:8px;border:1px solid #ccc;border-radius:4px;">
-          <input type="number" id="paramCv" placeholder="CV (ej: 60)" style="padding:8px;border:1px solid #ccc;border-radius:4px;">
-          <input type="number" id="paramCp" placeholder="CP (ej: 13)" style="padding:8px;border:1px solid #ccc;border-radius:4px;">
-          <input type="number" id="paramCt" placeholder="CT (ej: 73)" style="padding:8px;border:1px solid #ccc;border-radius:4px;">
+          <div>
+            <label style="font-size:12px;color:#666;">CV (días):</label>
+            <input type="number" id="editCv" placeholder="Ej: 56, 60" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;">
+          </div>
+          <div>
+            <label style="font-size:12px;color:#666;">CP (días):</label>
+            <input type="number" id="editCp" placeholder="Ej: 10, 13" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;">
+          </div>
         </div>
-        <textarea id="paramCurva" placeholder="Curva: 5.28, 6.20, 5.14, 8.14, ..." style="padding:8px;border:1px solid #ccc;border-radius:4px;width:100%;height:60px;font-family:monospace;font-size:12px;"></textarea>
-        <button class="btn btn-primary" onclick="guardarParametro()" style="margin-top:8px;width:100%;">Guardar Parámetro</button>
-      </div>
-
-      <!-- Sección Aprovechamiento -->
-      <div style="margin-bottom:24px;">
-        <div style="font-size:14px;font-weight:bold;color:#2c60a8;margin-bottom:8px;">Aprovechamiento</div>
-        <div style="font-size:12px;color:#666;margin-bottom:12px;background:#f0f4f8;padding:8px;border-radius:4px;">
-          💡 Nombre y Producto deben coincidir con los de la siembra
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:#666;">Flor Color:</label>
+          <input type="text" id="editColor" placeholder="Ej: SNOR, PK, RD, WH" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;">
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-          <input type="text" id="aprovNomFlor" placeholder="ej: Potomac Orange" style="padding:8px;border:1px solid #ccc;border-radius:4px;">
-          <input type="text" id="aprovProducto" placeholder="ej: SN" style="padding:8px;border:1px solid #ccc;border-radius:4px;">
-          <input type="text" id="aprovColor" placeholder="ej: SNOR" style="padding:8px;border:1px solid #ccc;border-radius:4px;">
-          <input type="number" id="aprovValor" placeholder="0.91" min="0" max="1" step="0.01" style="padding:8px;border:1px solid #ccc;border-radius:4px;">
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:#666;">Aprovechamiento (0-1):</label>
+          <input type="number" id="editAprov" min="0" max="1" step="0.01" placeholder="Ej: 0.91, 0.85" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;">
         </div>
-        <button class="btn btn-primary" onclick="guardarAprovechamiento()" style="width:100%;">Guardar Aprovechamiento</button>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:#666;">Curva (números separados por comas):</label>
+          <textarea id="editCurva" placeholder="Ej: 5.28, 6.20, 5.14, 8.14, ..." style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:monospace;font-size:12px;height:50px;resize:vertical;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="guardarVariedadEditadaModal()" style="flex:1;">Guardar</button>
+          <button class="btn btn-secondary" onclick="limpiarFormularioVariedad()" style="flex:1;">Cancelar</button>
+        </div>
       </div>
 
       <div style="display:flex;gap:12px;">
+        <button class="btn btn-primary" onclick="abrirFormularioNuevaVariedad()" style="flex:1;">Agregar Nueva</button>
         <button class="btn btn-secondary" onclick="cerrarModalVariedades()" style="flex:1;">Cerrar</button>
       </div>
     </div>
@@ -1418,6 +1453,42 @@
     let mostrarLeyendasVariedades = false
     let bloquesTerminados = new Set()
 
+    // Performance optimizations
+    let normTextoCache = {}
+    let timeoutBusquedaHistorial = null
+    let timeoutBusquedaColor = null
+    let timeoutBuscaVariedad = null
+
+    function normalizarTextoMemo(t) {
+      if (!normTextoCache[t]) normTextoCache[t] = normalizarTexto(t)
+      return normTextoCache[t]
+    }
+
+    function limpiarCacheNormalizacion() {
+      normTextoCache = {}
+    }
+
+    function debounceBuscaVariedad() {
+      clearTimeout(timeoutBuscaVariedad)
+      timeoutBuscaVariedad = setTimeout(() => renderTablaVariedades(), 150)
+    }
+
+    function actualizarEstado() {
+      let siembrasOK = siembrasData.length > 0
+      let planFincaOK = Object.keys(planFincaAnual).length > 0
+      let variedadesOK = PARAMETROS_DATA.length > 0
+
+      document.getElementById('estadoSiembras').textContent = siembrasOK ? 'OK' : 'Falta'
+      document.getElementById('estadoSiembras').style.color = siembrasOK ? '#22c55e' : '#ef4444'
+      document.getElementById('countSiembras').textContent = siembrasData.length
+
+      document.getElementById('estadoPlanFinca').textContent = planFincaOK ? 'OK' : 'Falta'
+      document.getElementById('estadoPlanFinca').style.color = planFincaOK ? '#22c55e' : '#f59e0b'
+      document.getElementById('statusPlanFinca').textContent = planFincaOK ? 'Cargado' : 'No cargado'
+
+      document.getElementById('countVariedades').textContent = PARAMETROS_DATA.length
+    }
+
     function togglePlanFinca() {
       mostrarPlanFinca = !mostrarPlanFinca;
       let btn = document.getElementById('btnToggleFinca');
@@ -1442,7 +1513,7 @@
       mostrarPronostico = !mostrarPronostico;
       let btn = document.getElementById('btnTogglePronostico');
       if (btn) {
-        btn.textContent = mostrarPronostico ? 'Ocultar Pronostico MJ' : '  Mostrar Pronostico MJ';
+        btn.textContent = mostrarPronostico ? 'Ocultar Pronóstico' : '  Mostrar Pronóstico';
         btn.className = mostrarPronostico ? 'btn btn-secondary' : 'btn btn-primary';
       }
       generarHistorial();
@@ -1462,7 +1533,7 @@
     }
 
     const LS_PREFIX = 'per4v3_'
-    const columnasOcultas = ["tallos", "suma_de_pltas_cama", "suma_de_pltascama", "semana", "lc", "curva", "per4_real_modificado", "orig_cp", "orig_per4_real", "adj_cp", "adj_per4_real", "total_variedad"]
+    const columnasOcultas = ["tallos", "suma_de_pltas_cama", "suma_de_pltascama", "semana", "lc", "curva", "per4_real_modificado", "orig_cp", "orig_per4_real", "adj_cp", "adj_per4_real"]
 
     //        Debounce helper       
     function debounce(fn, ms) {
@@ -1475,7 +1546,7 @@
 
     // Columnas que se pueden mostrar/ocultar
     let columnasVisibles = {}
-    const colsMinimas = ["nom_flor", "cm", "bloque", "plantas", "aprovechamiento", "per4_real", "per4"]
+    const colsMinimas = ["nom_flor", "bloque", "cm", "plantas", "cv", "aprovechamiento", "fecha_ini_corte", "fecha_fin_corte", "dias_en_semana", "porcentaje_de_corte", "pronostico_MJ", "per4_real", "per4", "total_variedad"]
 
     //                                                                                                                                                                                                                               
     // UI: Tabs, Toast, File buttons
@@ -1565,7 +1636,7 @@
       filtrar()
     }
     function getNombresVista() {
-      return { "nom_flor": "Variedad", "fecha": "Fecha siembra", "cm": "Cama", "lc": "DL", "cv": "C.Veg", "cp": "C.Prod", "ct": "C.Total", "pronostico_MJ": "pronostico_MJ", "dias_en_semana": "Dias Corte", "porcentaje_de_corte": "% Corte", "per4_real": "PER4 REAL", "aprovechamiento": "Aprove", "per4": "PER4", "flor_color": "Color", "plantas": "Pl. densidad", "observaciones": "Observaciones", "adj_cv": "Ajuste CV", "adj_aprov": "Ajuste Aprov", "orig_cv": "Origin CV", "orig_aprov": "Origin Aprov" }
+      return { "nom_flor": "Variedad", "fecha": "Fecha siembra", "cm": "Cama", "lc": "DL", "cv": "C.Veg", "cp": "C.Prod", "ct": "C.Total", "pronostico_MJ": "Pronóstico", "dias_en_semana": "Dias Corte", "porcentaje_de_corte": "% Corte", "per4_real": "PER4 %", "aprovechamiento": "Aprove", "per4": "PER4-tallos", "flor_color": "Color", "plantas": "Densidad", "observaciones": "Observaciones", "adj_cv": "Ajuste CV", "adj_aprov": "Ajuste Aprov", "orig_cv": "Origin CV", "orig_aprov": "Origin Aprov", "bloque": "Bloque", "total_variedad": "Total Variedad" }
     }
 
     //                                                                                                                                                                                                                               
@@ -1648,6 +1719,7 @@
 
         console.log('Plan Finca cargado:', Object.keys(planFincaAnual).length, 'variedades')
         mostrarToast(`Plan Finca cargado: ${Object.keys(planFincaAnual).length} variedades`)
+        actualizarEstado()
         callback()
       }
       reader.readAsArrayBuffer(file)
@@ -1752,7 +1824,104 @@
       return Math.round(total * 100) / 100
     }
 
-    //                                                                                                                                                                                                                               
+    function detectarDuplicadosExactos() {
+      let mapa = {}
+      let grupos = []
+
+      resultadoFinal.forEach((r, idx) => {
+        let k = normalizarTexto(r.bloque || '') + '|' + normalizarTexto(r.nom_flor || '') + '|' + normalizarTexto(r.cm || '') + '|' + normalizarTexto(r.plantas || '')
+        if (!mapa[k]) mapa[k] = []
+        mapa[k].push(idx)
+      })
+
+      Object.entries(mapa).forEach(([k, indices]) => {
+        if (indices.length > 1) {
+          grupos.push({
+            key: k,
+            indices: indices,
+            registros: indices.map(i => resultadoFinal[i])
+          })
+        }
+      })
+
+      if (grupos.length > 0) {
+        mostrarModalDuplicados(grupos)
+      }
+    }
+
+    function mostrarModalDuplicados(grupos) {
+      let modal = document.getElementById('modalDuplicados')
+      if (!modal) {
+        modal = document.createElement('div')
+        modal.id = 'modalDuplicados'
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;'
+        document.body.appendChild(modal)
+      }
+
+      let html = `
+        <div style="background:white;border-radius:12px;padding:20px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+          <h2 style="color:#1a4a8c;margin:0 0 16px 0;font-size:18px;">Duplicados Exactos Detectados</h2>
+          <p style="color:#666;margin:0 0 16px 0;font-size:13px;">Se encontraron ${grupos.length} grupo(s) de registros idénticos. Selecciona cuáles eliminar:</p>
+          <div id="duplicadosContainer" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button onclick="cerrarModalDuplicados()" style="background:#95a5a6;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;">Cancelar</button>
+            <button onclick="eliminarDuplicadosSeleccionados()" style="background:#e74c3c;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;">Eliminar Seleccionados</button>
+          </div>
+        </div>
+      `
+
+      modal.innerHTML = html
+      modal.style.display = 'flex'
+
+      let container = document.getElementById('duplicadosContainer')
+      grupos.forEach((grupo, gIdx) => {
+        let [bloque, nom_flor, cm, plantas] = grupo.key.split('|')
+        let grupoHtml = `<div style="border:1px solid #ddd;border-radius:8px;padding:12px;background:#f9f9f9;">`
+        grupoHtml += `<div style="font-weight:bold;color:#1a4a8c;margin-bottom:8px;font-size:13px;">Bloque ${bloque} | ${nom_flor} | Cama ${cm} | Densidad ${plantas}</div>`
+        grupoHtml += `<div style="display:flex;flex-direction:column;gap:6px;">`
+
+        grupo.registros.forEach((r, rIdx) => {
+          let actualIdx = grupo.indices[rIdx]
+          grupoHtml += `
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;">
+              <input type="checkbox" class="dup-check-${gIdx}" data-idx="${actualIdx}" style="cursor:pointer;">
+              Fila: ${actualIdx + 2} | Fecha: ${r.fecha} | Producto: ${r.producto}
+            </label>
+          `
+        })
+
+        grupoHtml += `</div></div>`
+        container.innerHTML += grupoHtml
+      })
+    }
+
+    function cerrarModalDuplicados() {
+      let modal = document.getElementById('modalDuplicados')
+      if (modal) modal.style.display = 'none'
+    }
+
+    function eliminarDuplicadosSeleccionados() {
+      let checkboxes = document.querySelectorAll('[class^="dup-check-"]')
+      let toRemove = new Set()
+
+      checkboxes.forEach(cb => {
+        if (cb.checked) {
+          toRemove.add(parseInt(cb.dataset.idx))
+        }
+      })
+
+      if (toRemove.size === 0) { mostrarToast('Selecciona al menos un registro para eliminar', 'warning'); return }
+
+      let eliminados = toRemove.size
+      resultadoFinal = resultadoFinal.filter((r, idx) => !toRemove.has(idx))
+      siembrasData = resultadoFinal
+
+      cerrarModalDuplicados()
+      mostrarToast(`${eliminados} registro(s) eliminado(s)`)
+      cruzarDatos()
+    }
+
+    //
     // SEMANA
     //                                                                                                                                                                                                                               
     function aplicarSemana() {
@@ -2148,15 +2317,13 @@
           cruzarDatos()
           ocultarSpinner()
           mostrarToast('Datos cargados correctamente')
+          actualizarEstado()
           cambiarTab('datos')
         })
       }, 50)
     }
 
     function cruzarDatos() {
-      let _vistas = new Set()
-      siembrasData = siembrasData.filter(r => { let k = normalizarTexto(r.nom_flor) + '|' + normalizarTexto(r.cm) + '|' + normalizarTexto(r.plantas); if (_vistas.has(k)) return false; _vistas.add(k); return true })
-
       planesPorVariedad = {}; ajustesManual = {}; resultadoFinal = []; mapaVariedades = {}; mapaProducto = {}
 
       let mapaAprov = {}
@@ -2199,9 +2366,30 @@
       mapaVariedades = {}; mapaProducto = {}
       resultadoFinal.forEach((r, i) => { let f = normalizarTexto(r.nom_flor); if (!mapaVariedades[f]) mapaVariedades[f] = []; mapaVariedades[f].push(i); let kp = normalizarTexto(r.nom_flor) + "|" + normalizarTexto(r.producto); if (!mapaProducto[kp]) mapaProducto[kp] = []; mapaProducto[kp].push(i) })
 
+      // Calcular total_variedad para cada fila
+      resultadoFinal.forEach(r => {
+        let total = 0
+        resultadoFinal.forEach(row => {
+          if (normalizarTextoMemo(row.nom_flor) === normalizarTextoMemo(r.nom_flor)) {
+            total += (row.per4 || 0)
+          }
+        })
+        r.total_variedad = total
+      })
+
+      detectarDuplicadosExactos()
       cargarFiltros(); mostrarTabla(resultadoFinal); generarHistorial(); guardarEstado()  // explicito: muestra toast
     }
 
+
+      // Diagnostic: warn if there are varieties without parameters
+      const sinParam = [...new Set(resultadoFinal.filter(r => !r.cv && !r.aprovechamiento).map(r => r.nom_flor + ' (' + r.producto + ')'))]
+      if (sinParam.length > 0 && resultadoFinal.length > 0) {
+        console.warn('Variedades sin parámetros:', sinParam)
+        let msg = '⚠️ ' + sinParam.length + ' variedad(es) sin parámetros: ' + sinParam.slice(0, 2).join(', ')
+        if (sinParam.length > 2) msg += '...'
+        mostrarToast(msg, 'warning')
+      }
     //                                                                                                                                                                                                                               
     // TABLA PRINCIPAL
     //                                                                                                                                                                                                                               
@@ -2220,7 +2408,7 @@
       // Init column toggle
       cols.forEach(c => {
         if (columnasVisibles[c] === undefined) {
-          columnasVisibles[c] = !c.startsWith("adj_")
+          columnasVisibles[c] = colsMinimas.includes(c)
         }
       })
       initColToggle(cols)
@@ -2236,6 +2424,7 @@
       })
       tablaResultado.appendChild(tr)
 
+      let frag = document.createDocumentFragment()
       data.forEach(r => {
         let i = resultadoFinal.indexOf(r)
         let tr = document.createElement("tr")
@@ -2278,7 +2467,7 @@
           else if (c === "fecha_ini_corte") { celdasFechaIni[i] = td; td.textContent = r[c] || "" }
           else if (c === "fecha_fin_corte") { celdasFechaFin[i] = td; td.textContent = r[c] || "" }
           else if (c === "per4_real") {
-            let input = document.createElement("input"); input.value = r[c] !== undefined ? parseFloat(Math.round(r[c])) : ""; input.type = "number"; input.inputMode = "decimal"
+            let input = document.createElement("input"); input.value = r[c] !== undefined ? parseFloat(r[c]).toFixed(2) : ""; input.type = "number"; input.inputMode = "decimal"; input.step = "0.01"
             input.oninput = () => calcularFilaDebounced(i, input.value); td.appendChild(input)
             celdasPer4Real[i] = input;
             td.style.background = "#fdf5d0"
@@ -2297,21 +2486,34 @@
             td.style.borderLeft = "2px solid #e8c84c"
             td.style.borderRight = "2px solid #e8c84c"
           }
+          else if (c === "total_variedad") {
+            let totalVar = calcularTotalVariedad(r.nom_flor, data)
+            td.textContent = Math.round(totalVar)
+            td.style.background = "#e8f5e9"
+            td.style.color = "#2e7d32"
+            td.style.fontWeight = "700"
+            td.style.borderLeft = "2px solid #66bb6a"
+            td.style.borderRight = "2px solid #66bb6a"
+          }
           else if (c === "dias_en_semana") { celdasDiasEnSemana[i] = td; td.textContent = r[c] !== undefined ? r[c] : "" }
           else if (c === "pronostico_MJ") { celdasPer4Pron[i] = td; td.textContent = r[c] !== undefined ? Math.round(r[c]) : "" }
           else if (c === "porcentaje_de_corte") { celdasPctCorte[i] = td; td.textContent = r[c] !== undefined ? r[c] + "%" : "" }
           else { td.textContent = r[c] !== undefined ? r[c] : "" }
           tr.appendChild(td)
         })
-        tablaResultado.appendChild(tr)
+        frag.appendChild(tr)
       })
+      tablaResultado.appendChild(frag)
 
-      // Fila de totales
+      // Fila de totales (sticky)
       let totalPer4 = 0, totalPron = 0
       data.forEach(r => { totalPer4 += (r.per4 || 0); totalPron += (r.pronostico_MJ || 0) })
       let trTotal = document.createElement("tr")
       trTotal.style.background = "#c9a84c"
       trTotal.style.color = "#0f172a"
+      trTotal.style.position = "sticky"
+      trTotal.style.bottom = "0"
+      trTotal.style.zIndex = "10"
       visCols.forEach(c => {
         let td = document.createElement("td")
         td.style.fontWeight = "800"
@@ -2320,7 +2522,7 @@
         td.style.color = "#0f172a"
         td.style.position = c === visCols[0] ? "sticky" : ""
         td.style.left = c === visCols[0] ? "0" : ""
-        td.style.zIndex = c === visCols[0] ? "6" : ""
+        td.style.zIndex = c === visCols[0] ? "11" : ""
         if (c === visCols[0]) td.textContent = "TOTAL BLOQUE"
         else if (c === "per4") { td.textContent = Math.round(totalPer4); tdTotalPer4 = td; }
         else if (c === "pronostico_MJ") { td.textContent = Math.round(totalPron); tdTotalPron = td; }
@@ -2335,12 +2537,38 @@
     //                                                                                                                                                                                                                               
     // EDICI  N Y C  LCULOS
     //                                                                                                                                                                                                                               
+    function calcularTotalVariedad(nomFlor, data) {
+      let bloqueActivo = document.getElementById('bloqueSelect')?.value
+      let total = 0
+      data.forEach(r => {
+        if (normalizarTextoMemo(r.nom_flor) === normalizarTextoMemo(nomFlor)) {
+          if (bloqueActivo && String(r.bloque) !== bloqueActivo) return
+          total += (r.per4 || 0)
+        }
+      })
+      return total
+    }
+
     function recalcularTotalesFooter() {
       if (!datosVisibles) return
       let tPer4 = 0, tPron = 0
       datosVisibles.forEach(r => { tPer4 += (r.per4 || 0); tPron += (r.pronostico_MJ || 0) })
       if (tdTotalPer4) tdTotalPer4.textContent = tPer4.toFixed(2)
       if (tdTotalPron) tdTotalPron.textContent = tPron.toFixed(2)
+      actualizarTotalesVariedad()
+    }
+
+    function actualizarTotalesVariedad() {
+      document.querySelectorAll('tbody tr').forEach(tr => {
+        let tdTotalVar = tr.querySelector('td:has(+ td)') // Encuentra td con total_variedad
+        if (!tdTotalVar) return
+        let nomFlor = tr.cells[0]?.textContent
+        if (nomFlor) {
+          let total = calcularTotalVariedad(nomFlor, datosVisibles)
+          let tdTotal = Array.from(tr.cells).find(td => td.style.borderLeft === '2px solid #66bb6a')
+          if (tdTotal) tdTotal.textContent = Math.round(total)
+        }
+      })
     }
 
     function editarObservacion(i, valor) {
@@ -2413,9 +2641,9 @@
       let pct = rj.porcentaje_de_corte || 0, plantas = parseFloat((rj.plantas || 0).toString().replace(/,/g, '')) || 0, aprove = rj.aprovechamiento || 0
       rj.pronostico_MJ = plantas * aprove * (pct / 100)
       if (!rj.per4_real_modificado) {
-        rj.per4_real = Math.round(pct)
+        rj.per4_real = rj.porcentaje_de_corte
         rj.per4 = Math.round(plantas * aprove * (pct / 100))
-        if (celdasPer4Real[j]) celdasPer4Real[j].value = Math.round(pct)
+        if (celdasPer4Real[j]) celdasPer4Real[j].value = rj.porcentaje_de_corte
         if (celdasPer4[j]) celdasPer4[j].textContent = Math.round(rj.per4)
       }
       if (celdasDiasEnSemana[j]) celdasDiasEnSemana[j].textContent = rj.dias_en_semana
@@ -2465,16 +2693,16 @@
           let pct = r.porcentaje_de_corte || 0, plantas = parseFloat((r.plantas || 0).toString().replace(/,/g, "")) || 0, aprove = r.aprovechamiento || 0
           r.pronostico_MJ = Math.round(plantas * aprove * (pct / 100))
           if (!r.per4_real_modificado) {
-            r.per4_real = Math.round(pct)
+            r.per4_real = r.porcentaje_de_corte
             r.per4 = Math.round(plantas * aprove * (pct / 100))
           }
         })
-        base = resultadoFinal.filter(r => r.dias_en_semana > 0)
+        base = resultadoFinal.filter(r => r.dias_en_semana > 0 || !r.cv)
       } else {
         resultadoFinal.forEach(r => {
           r.dias_en_semana = 0; r.porcentaje_de_corte = 0; r.pronostico_MJ = 0;
           if (!r.per4_real_modificado) {
-            r.per4_real = 100
+            r.per4_real = 0
             let plantas = parseFloat((r.plantas || 0).toString().replace(/,/g, "")) || 0
             r.per4 = Math.round(plantas * (r.aprovechamiento || 0))
           }
@@ -2505,12 +2733,17 @@
       let datos = ordenarPorCama(aplicar(null)); mostrarTabla(datos)
     }
 
-    //                                                                                                                                                                                                                               
+    //
     // HISTORIAL
-    //                                                                                                                                                                                                                               
+    //
+    function debounceGenerarHistorial() {
+      clearTimeout(timeoutBusquedaHistorial)
+      timeoutBusquedaHistorial = setTimeout(() => generarHistorial(), 300)
+    }
+
     function generarHistorial() {
-      let busqueda = normalizarTexto(document.getElementById("busquedaHistorial").value)
-      let busquedaColor = normalizarTexto(document.getElementById("busquedaColor").value)
+      let busqueda = normalizarTextoMemo(document.getElementById("busquedaHistorial").value)
+      let busquedaColor = normalizarTextoMemo(document.getElementById("busquedaColor").value)
       // busquedaProducto reemplazado por multi-select
       let tabla = tablaHistorial; tabla.innerHTML = ""
 
@@ -3032,6 +3265,19 @@
 
         if (!res || res.length === 0) return;
 
+        // Recalcular total_variedad en datos restaurados
+        resultadoFinal.forEach(r => {
+          if (!r.total_variedad) {
+            let total = 0
+            resultadoFinal.forEach(row => {
+              if (normalizarTextoMemo(row.nom_flor) === normalizarTextoMemo(r.nom_flor)) {
+                total += (row.per4 || 0)
+              }
+            })
+            r.total_variedad = total
+          }
+        })
+
         mapaVariedades = {}; mapaProducto = {}
         resultadoFinal.forEach((r, i) => { let f = normalizarTexto(r.nom_flor); if (!mapaVariedades[f]) mapaVariedades[f] = []; mapaVariedades[f].push(i); let kp = normalizarTexto(r.nom_flor) + '|' + normalizarTexto(r.producto); if (!mapaProducto[kp]) mapaProducto[kp] = []; mapaProducto[kp].push(i) })
         cargarFiltros(); actualizarBadgeSemana(); filtrar(); generarHistorial()
@@ -3071,6 +3317,7 @@
       } catch (e) {
         console.warn('Error cargando variedades custom:', e);
       }
+      if (resultadoFinal.length > 0) cruzarDatos()
     }
 
     async function guardarVariedadCustom(entry) {
@@ -3133,88 +3380,135 @@
       }
     }
 
-    function renderListadoVariedades() {
-      const filtro = normalizarTexto(document.getElementById('buscarVariedad')?.value || '')
-      const mapa = {}
+    function buscarYMostrarVariedades() {
+      const filtro = normalizarTextoMemo(document.getElementById('buscarVariedad').value.trim())
+      const listado = document.getElementById('listadoVariedades')
+      listado.innerHTML = ''
+
+      if (!filtro) return
+
+      let variedades = new Map()
       PARAMETROS_DATA.forEach(p => {
-        const k = normalizarTexto(p.nom_flor) + '|' + normalizarTexto(p.producto)
-        if (!mapa[k]) mapa[k] = { nom_flor: p.nom_flor, producto: p.producto }
+        let key = normalizarTextoMemo(p.nom_flor) + '|' + normalizarTextoMemo(p.producto)
+        if (!variedades.has(key)) {
+          variedades.set(key, { nom_flor: p.nom_flor, producto: p.producto, cv: p.cv, cp: p.cp, aprov: 0 })
+        }
       })
-      APROVECHAMIENTOS_DATA.forEach(p => {
-        const k = normalizarTexto(p.nom_flor) + '|' + normalizarTexto(p.producto)
-        if (!mapa[k]) mapa[k] = { nom_flor: p.nom_flor, producto: p.producto }
+
+      APROVECHAMIENTOS_DATA.forEach(a => {
+        let key = normalizarTextoMemo(a.nom_flor) + '|' + normalizarTextoMemo(a.producto)
+        if (variedades.has(key)) {
+          variedades.get(key).aprov = a.aprovechamiento
+        }
       })
-      
-      const items = Object.values(mapa).filter(v => !filtro || normalizarTexto(v.nom_flor).includes(filtro) || normalizarTexto(v.producto).includes(filtro))
-      const html = items.map(v => `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;"><span><strong>${v.nom_flor}</strong> <span style="color:#666">(${v.producto})</span></span><button onclick="eliminarVariedad('${v.nom_flor}','${v.producto}')" style="background:#c0392b;color:#fff;border:none;border-radius:4px;padding:3px 8px;cursor:pointer;font-size:11px;">Eliminar</button></div>`).join('')
-      document.getElementById('listadoVariedades').innerHTML = html || '<p style="color:#999;text-align:center;padding:20px;font-size:12px;">No hay variedades</p>'
+
+      let encontrados = []
+      variedades.forEach((v, key) => {
+        if (normalizarTextoMemo(v.nom_flor).includes(filtro) || normalizarTextoMemo(v.producto).includes(filtro)) {
+          encontrados.push(v)
+        }
+      })
+
+      if (encontrados.length === 0) return
+
+      encontrados.forEach(v => {
+        let item = document.createElement('div')
+        item.style.cssText = 'padding:10px;border-bottom:1px solid #eee;cursor:pointer;font-size:13px;'
+        item.innerHTML = `<strong>${v.nom_flor}</strong> <span style="color:#666;">(${v.producto})</span>`
+        item.onmouseover = () => item.style.background = '#e8f0f8'
+        item.onmouseout = () => item.style.background = 'transparent'
+        item.onclick = () => cargarVariedadEnFormulario(v.nom_flor, v.producto)
+        listado.appendChild(item)
+      })
     }
+
+    function cargarVariedadEnFormulario(nomFlor, producto) {
+      const param = PARAMETROS_DATA.find(p => p.nom_flor === nomFlor && p.producto === producto)
+      const aprov = APROVECHAMIENTOS_DATA.find(a => a.nom_flor === nomFlor && a.producto === producto)
+
+      document.getElementById('editNomFlor').value = nomFlor
+      document.getElementById('editNomFlor').readOnly = true
+      document.getElementById('editProducto').value = producto
+      document.getElementById('editProducto').readOnly = true
+      document.getElementById('editCv').value = param?.cv || 0
+      document.getElementById('editCp').value = param?.cp || 0
+      document.getElementById('editColor').value = aprov?.flor_color || ''
+      document.getElementById('editAprov').value = aprov?.aprovechamiento || 0
+      document.getElementById('editCurva').value = param?.curva?.join(', ') || ''
+      document.getElementById('tituloFormulario').textContent = 'Editar: ' + nomFlor + ' (' + producto + ')'
+      document.getElementById('formularioVariedad').style.display = 'block'
+    }
+
+    function abrirFormularioNuevaVariedad() {
+      document.getElementById('editNomFlor').value = ''
+      document.getElementById('editNomFlor').readOnly = false
+      document.getElementById('editProducto').value = ''
+      document.getElementById('editProducto').readOnly = false
+      document.getElementById('editCv').value = ''
+      document.getElementById('editCp').value = ''
+      document.getElementById('editColor').value = ''
+      document.getElementById('editAprov').value = ''
+      document.getElementById('editCurva').value = ''
+      document.getElementById('tituloFormulario').textContent = 'Agregar Nueva Variedad'
+      document.getElementById('formularioVariedad').style.display = 'block'
+    }
+
+    function limpiarFormularioVariedad() {
+      document.getElementById('formularioVariedad').style.display = 'none'
+      document.getElementById('buscarVariedad').value = ''
+      document.getElementById('listadoVariedades').innerHTML = ''
+    }
+
+    function guardarVariedadEditadaModal() {
+      const nomFlor = document.getElementById('editNomFlor').value.trim()
+      const producto = document.getElementById('editProducto').value.trim().toUpperCase()
+      const cv = parseFloat(document.getElementById('editCv').value) || 0
+      const cp = parseFloat(document.getElementById('editCp').value) || 0
+      const color = document.getElementById('editColor').value.trim().toUpperCase()
+      const aprov = parseFloat(document.getElementById('editAprov').value) || 0
+      const curvaStr = document.getElementById('editCurva').value.trim()
+      const curva = curvaStr ? curvaStr.split(',').map(v => parseFloat(v.trim()) || 0) : []
+
+      if (!nomFlor || !producto) { mostrarToast('Nombre y Producto son obligatorios', 'error'); return }
+
+      let paramIdx = PARAMETROS_DATA.findIndex(p => p.nom_flor === nomFlor && p.producto === producto)
+      if (paramIdx >= 0) {
+        PARAMETROS_DATA[paramIdx].cv = cv
+        PARAMETROS_DATA[paramIdx].cp = cp
+        PARAMETROS_DATA[paramIdx].ct = cv + cp
+        if (curva.length > 0) PARAMETROS_DATA[paramIdx].curva = curva
+        mostrarToast('Variedad actualizada')
+      } else {
+        PARAMETROS_DATA.push({ nom_flor: nomFlor, producto: producto, cv, cp, ct: cv + cp, curva })
+        mostrarToast('Variedad agregada')
+      }
+
+      let aprovIdx = APROVECHAMIENTOS_DATA.findIndex(a => a.nom_flor === nomFlor && a.producto === producto)
+      if (aprovIdx >= 0) {
+        APROVECHAMIENTOS_DATA[aprovIdx].flor_color = color || 'DEFAULT'
+        APROVECHAMIENTOS_DATA[aprovIdx].aprovechamiento = aprov
+      } else if (aprov > 0 || color) {
+        APROVECHAMIENTOS_DATA.push({ nom_flor: nomFlor, producto: producto, flor_color: color || 'DEFAULT', aprovechamiento: aprov })
+      }
+
+      guardarEstadoDebounced()
+      if (resultadoFinal.length > 0) cruzarDatos()
+      limpiarFormularioVariedad()
+    }
+
     function abrirModalVariedades() {
       let modal = document.getElementById('modalVariedades');
-      if (modal) modal.style.display = 'flex';
-      renderListadoVariedades();
+      if (modal) {
+        modal.style.display = 'flex';
+        document.getElementById('buscarVariedad').focus()
+        document.getElementById('buscarVariedad').value = ''
+        document.getElementById('formularioVariedad').style.display = 'none'
+      }
     }
-
-
 
     function cerrarModalVariedades() {
       let modal = document.getElementById('modalVariedades');
       if (modal) modal.style.display = 'none';
-    }
-
-    function guardarParametro() {
-      let nomFlor = document.getElementById('paramNomFlor').value.trim();
-      let producto = document.getElementById('paramProducto').value.trim().toUpperCase();
-      let cv = parseFloat(document.getElementById('paramCv').value) || 0;
-      let cp = parseFloat(document.getElementById('paramCp').value) || 0;
-      let ct = parseFloat(document.getElementById('paramCt').value) || 0;
-      let curvaStr = document.getElementById('paramCurva').value.trim();
-
-      if (!nomFlor || !producto) { mostrarToast('Nombre y Producto son obligatorios', 'error'); return; }
-
-      let curva = [];
-      if (curvaStr) {
-        curva = curvaStr.split(',').map(v => parseFloat(v.trim()) || 0);
-      }
-
-      let entry = { nom_flor: nomFlor, producto: producto, cv: cv, cp: cp, ct: ct, curva: curva };
-      guardarVariedadCustom(entry).then(() => {
-        document.getElementById('paramNomFlor').value = '';
-        document.getElementById('paramProducto').value = '';
-        document.getElementById('paramCv').value = '';
-        document.getElementById('paramCp').value = '';
-        document.getElementById('paramCt').value = '';
-        document.getElementById('paramCurva').value = '';
-        mostrarToast(`Variedad agregada: ${nomFlor} (${producto}) - Integrada en cálculos`);
-        // Regenerar datos si existen
-        if (resultadoFinal.length > 0) {
-          cruzarDatos();
-          renderListadoVariedades();
-        }
-      });
-    }
-
-    function guardarAprovechamiento() {
-      let nomFlor = document.getElementById('aprovNomFlor').value.trim();
-      let producto = document.getElementById('aprovProducto').value.trim().toUpperCase();
-      let color = document.getElementById('aprovColor').value.trim().toUpperCase();
-      let valor = parseFloat(document.getElementById('aprovValor').value) || 0;
-
-      if (!nomFlor || !producto || !color) { mostrarToast('Nombre, Producto y Color son obligatorios', 'error'); return; }
-
-      let entry = { nom_flor: nomFlor, producto: producto, flor_color: color, aprovechamiento: valor };
-      guardarAprovechamientoCustom(entry).then(() => {
-        document.getElementById('aprovNomFlor').value = '';
-        document.getElementById('aprovProducto').value = '';
-        document.getElementById('aprovColor').value = '';
-        document.getElementById('aprovValor').value = '';
-        mostrarToast(`Aprovechamiento agregado: ${nomFlor} (${producto}|${color})`);
-        // Regenerar datos si existen
-        if (resultadoFinal.length > 0) {
-          cruzarDatos();
-          renderListadoVariedades();
-        }
-      });
     }
 
     async function limpiarSesion() {
@@ -3226,24 +3520,35 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
+      mostrarSpinner('Inicializando aplicación...')
+
       // Inicializar Plan Finca desde datos embebidos (siempre disponibles sin subir archivos)
       if (typeof PLAN_FINCA_ANUAL !== 'undefined' && Object.keys(PLAN_FINCA_ANUAL).length > 0) {
         planFincaAnual = Object.assign({}, PLAN_FINCA_ANUAL)
       }
-      await restaurarEstado()  // Si hay datos actualizados en IndexedDB, los sobreescribira
-      await restaurarPlanFincaEnDB()  // Restaurar Plan Finca cargado previamente
-      await cargarVariedadesCustom()
+
+      // Ejecutar operaciones de restauración en paralelo (no secuencial)
+      try {
+        await Promise.all([
+          restaurarEstado(),
+          restaurarPlanFincaEnDB(),
+          cargarVariedadesCustom()
+        ])
+      } catch (e) {
+        console.error('Error al restaurar estado:', e)
+      }
+
       // Marcar botón Plan Finca (los datos embebidos siempre están disponibles)
       let bpf = document.getElementById('btnPlanFinca')
       if (bpf && Object.keys(planFincaAnual).length > 0 && !bpf.classList.contains('loaded')) {
         bpf.textContent = '✓ Plan Finca Embebido (' + Object.keys(planFincaAnual).length + ' var.)'
         bpf.classList.add('loaded')
       }
+
+      actualizarEstado()
+      ocultarSpinner()
     })
   </script>
-<script>
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js')
-</script>
 </body>
 
 </html>
