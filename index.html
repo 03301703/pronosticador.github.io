@@ -2326,6 +2326,23 @@
     function cruzarDatos() {
       planesPorVariedad = {}; ajustesManual = {}; resultadoFinal = []; mapaVariedades = {}; mapaProducto = {}
 
+      // Intentar usar Web Worker si está disponible
+      if (window.cruzarWorker) {
+        mostrarSpinner('Procesando datos...')
+        window.cruzarWorker.postMessage({
+          tipo: 'procesar',
+          siembrasData: siembrasData,
+          PARAMETROS_DATA: PARAMETROS_DATA,
+          APROVECHAMIENTOS_DATA: APROVECHAMIENTOS_DATA
+        })
+        return
+      }
+
+      // Fallback: procesar síncronamente
+      procesarDatosSync()
+    }
+
+    function procesarDatosSync() {
       let mapaAprov = {}
       APROVECHAMIENTOS_DATA.forEach(r => { let key = normalizarTexto(r.nom_flor) + "|" + normalizarTexto(r.producto); mapaAprov[key] = { aprovechamiento: r.aprovechamiento || 0, flor_color: r.flor_color || "" } })
 
@@ -2355,7 +2372,6 @@
           per4: (p_real / 100) * plantas * aprove,
           observaciones: r.observaciones || "",
           pronostico_MJ: plantas * aprove,
-          // Original values for tracking adjustments
           orig_cv: cv,
           orig_aprov: aprove,
           adj_cv: cv,
@@ -2366,19 +2382,23 @@
       mapaVariedades = {}; mapaProducto = {}
       resultadoFinal.forEach((r, i) => { let f = normalizarTexto(r.nom_flor); if (!mapaVariedades[f]) mapaVariedades[f] = []; mapaVariedades[f].push(i); let kp = normalizarTexto(r.nom_flor) + "|" + normalizarTexto(r.producto); if (!mapaProducto[kp]) mapaProducto[kp] = []; mapaProducto[kp].push(i) })
 
-      // Calcular total_variedad para cada fila
+      let totalPorVariedad = {}
       resultadoFinal.forEach(r => {
-        let total = 0
-        resultadoFinal.forEach(row => {
-          if (normalizarTextoMemo(row.nom_flor) === normalizarTextoMemo(r.nom_flor)) {
-            total += (row.per4 || 0)
-          }
-        })
-        r.total_variedad = total
+        let key = normalizarTextoMemo(r.nom_flor)
+        if (!totalPorVariedad[key]) totalPorVariedad[key] = 0
+        totalPorVariedad[key] += (r.per4 || 0)
+      })
+      resultadoFinal.forEach(r => {
+        r.total_variedad = totalPorVariedad[normalizarTextoMemo(r.nom_flor)] || 0
       })
 
+      finalizarCruzarDatos()
+    }
+
+    function finalizarCruzarDatos() {
       detectarDuplicadosExactos()
-      cargarFiltros(); mostrarTabla(resultadoFinal); generarHistorial(); guardarEstado()  // explicito: muestra toast
+      cargarFiltros(); mostrarTabla(resultadoFinal); generarHistorial(); guardarEstado()
+      ocultarSpinner()
     }
 
 
@@ -3520,6 +3540,26 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
+      // Inicializar Web Worker para procesamiento en segundo plano
+      try {
+        window.cruzarWorker = new Worker('./worker.js')
+        window.cruzarWorker.onmessage = function(event) {
+          const { exitoso, resultadoFinal, duplicados, error } = event.data
+          if (exitoso) {
+            resultadoFinal = resultadoFinal
+            if (duplicados && duplicados.length > 0) {
+              mostrarModalDuplicados(duplicados)
+            }
+            finalizarCruzarDatos()
+          } else {
+            console.error('Error en Web Worker:', error)
+            procesarDatosSync()
+          }
+        }
+      } catch (e) {
+        console.warn('Web Worker no disponible, usando procesamiento síncrono:', e)
+      }
+
       mostrarSpinner('Inicializando aplicación...')
 
       // Inicializar Plan Finca desde datos embebidos (siempre disponibles sin subir archivos)
