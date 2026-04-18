@@ -2312,37 +2312,34 @@
       if (!siembrasFile.files[0]) { mostrarToast("Carga el archivo de siembras", "error"); return }
       mostrarSpinner('Leyendo archivos...')
       setTimeout(() => {
-        leerExcel(siembrasFile.files[0], d1 => {
-          siembrasData = d1
-          cruzarDatos()
+        try {
+          leerExcel(siembrasFile.files[0], d1 => {
+            try {
+              console.log('Archivo leído:', d1.length, 'registros')
+              siembrasData = d1
+              console.log('Ejecutando cruzarDatos()...')
+              cruzarDatos()
+              console.log('cruzarDatos() completado')
+              mostrarToast('Datos cargados correctamente: ' + resultadoFinal.length + ' registros')
+              actualizarEstado()
+              cambiarTab('datos')
+            } catch (e) {
+              console.error('Error en cruzarDatos:', e)
+              mostrarToast('Error: ' + e.message, 'error')
+              ocultarSpinner()
+            }
+          })
+        } catch (e) {
+          console.error('Error leyendo Excel:', e)
+          mostrarToast('Error leyendo archivo: ' + e.message, 'error')
           ocultarSpinner()
-          mostrarToast('Datos cargados correctamente')
-          actualizarEstado()
-          cambiarTab('datos')
-        })
+        }
       }, 50)
     }
 
     function cruzarDatos() {
       planesPorVariedad = {}; ajustesManual = {}; resultadoFinal = []; mapaVariedades = {}; mapaProducto = {}
 
-      // Intentar usar Web Worker si está disponible
-      if (window.cruzarWorker) {
-        mostrarSpinner('Procesando datos...')
-        window.cruzarWorker.postMessage({
-          tipo: 'procesar',
-          siembrasData: siembrasData,
-          PARAMETROS_DATA: PARAMETROS_DATA,
-          APROVECHAMIENTOS_DATA: APROVECHAMIENTOS_DATA
-        })
-        return
-      }
-
-      // Fallback: procesar síncronamente
-      procesarDatosSync()
-    }
-
-    function procesarDatosSync() {
       let mapaAprov = {}
       APROVECHAMIENTOS_DATA.forEach(r => { let key = normalizarTexto(r.nom_flor) + "|" + normalizarTexto(r.producto); mapaAprov[key] = { aprovechamiento: r.aprovechamiento || 0, flor_color: r.flor_color || "" } })
 
@@ -2382,6 +2379,7 @@
       mapaVariedades = {}; mapaProducto = {}
       resultadoFinal.forEach((r, i) => { let f = normalizarTexto(r.nom_flor); if (!mapaVariedades[f]) mapaVariedades[f] = []; mapaVariedades[f].push(i); let kp = normalizarTexto(r.nom_flor) + "|" + normalizarTexto(r.producto); if (!mapaProducto[kp]) mapaProducto[kp] = []; mapaProducto[kp].push(i) })
 
+      // Calcular total_variedad optimizado O(n) en lugar de O(n²)
       let totalPorVariedad = {}
       resultadoFinal.forEach(r => {
         let key = normalizarTextoMemo(r.nom_flor)
@@ -2392,10 +2390,6 @@
         r.total_variedad = totalPorVariedad[normalizarTextoMemo(r.nom_flor)] || 0
       })
 
-      finalizarCruzarDatos()
-    }
-
-    function finalizarCruzarDatos() {
       detectarDuplicadosExactos()
       cargarFiltros(); mostrarTabla(resultadoFinal); generarHistorial(); guardarEstado()
       ocultarSpinner()
@@ -3540,26 +3534,6 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
-      // Inicializar Web Worker para procesamiento en segundo plano
-      try {
-        window.cruzarWorker = new Worker('./worker.js')
-        window.cruzarWorker.onmessage = function(event) {
-          const { exitoso, resultadoFinal, duplicados, error } = event.data
-          if (exitoso) {
-            resultadoFinal = resultadoFinal
-            if (duplicados && duplicados.length > 0) {
-              mostrarModalDuplicados(duplicados)
-            }
-            finalizarCruzarDatos()
-          } else {
-            console.error('Error en Web Worker:', error)
-            procesarDatosSync()
-          }
-        }
-      } catch (e) {
-        console.warn('Web Worker no disponible, usando procesamiento síncrono:', e)
-      }
-
       mostrarSpinner('Inicializando aplicación...')
 
       // Inicializar Plan Finca desde datos embebidos (siempre disponibles sin subir archivos)
