@@ -1,0 +1,13 @@
+{
+  "name": "Pronosticador - Flores El Trigal",
+  "short_name": "Pronosticador",
+  "description": "Sistema de pronóstico de flores con cálculos de Per, plantas y pronóstico de producción",
+  "start_url": "/pronosticador/",
+  "scope": "/pronosticador/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#1a4a8c",
+  "icons": [],
+  "categories": ["productivity", "business"]
+}
