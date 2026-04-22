@@ -1086,6 +1086,16 @@
       <div style="margin-top:14px;font-size:13px;color:#2e7d32;font-weight:600;">
         <span class="status-dot ok"></span>Aprovechamientos y Parametros cargados
       </div>
+      <!-- Selector Tipo PER -->
+      <div style="margin-top:14px;margin-bottom:10px;">
+        <label style="font-size:11px;font-weight:700;color:#1a4a8c;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">Tipo de PER</label>
+        <div style="display:flex;gap:0;align-items:center;">
+          <button id="btnPerTipo4" class="btn" onclick="seleccionarTipoPer('PER4')" style="border-radius:10px 0 0 10px;min-height:44px;padding:0 22px;font-size:15px;font-weight:800;background:#c9a84c;color:#0d1b2a;border:2px solid #c9a84c;">PER4</button>
+          <button id="btnPerTipo1" class="btn" onclick="seleccionarTipoPer('PER1')" style="border-radius:0;min-height:44px;padding:0 22px;font-size:15px;font-weight:800;background:#edf2fb;color:#1a4a8c;border:2px solid #b0c8e8;border-left:none;">PER1</button>
+          <button id="btnPerTipoOtro" class="btn" onclick="seleccionarTipoPer('OTRO')" style="border-radius:0 10px 10px 0;min-height:44px;padding:0 16px;font-size:13px;font-weight:700;background:#edf2fb;color:#1a4a8c;border:2px solid #b0c8e8;border-left:none;">Otro</button>
+          <input id="inputPerOtro" type="number" min="1" max="99" placeholder="#" style="display:none;width:60px;height:40px;margin-left:8px;text-align:center;font-size:16px;font-weight:800;border:2px solid #c9a84c;border-radius:8px;background:#fff;color:#1a4a8c;font-family:'Inter',sans-serif;" oninput="actualizarPerOtro(this.value)">
+        </div>
+      </div>
       <div class="btn-row">
         <button class="btn btn-primary" onclick="unificar()">Cargar Informacion</button>
         <button class="btn btn-secondary" onclick="exportarUnificado()">Descargar Tabla</button>
@@ -1168,7 +1178,7 @@
     </div>
 
     <div class="card">
-      <div class="card-title">Semana PER4</div>
+      <div class="card-title">Semana PER</div>
       <!-- Fila principal: numero + boton calendario + badge + botones -->
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <!-- Numero de semana -->
@@ -1411,6 +1421,33 @@
     let mostrarPronostico = true
     let mostrarLeyendasVariedades = false
     let bloquesTerminados = new Set()
+    let tipoPer = 'PER4' // 'PER4' o 'PER1'
+
+    function seleccionarTipoPer(tipo) {
+      let btn4 = document.getElementById('btnPerTipo4')
+      let btn1 = document.getElementById('btnPerTipo1')
+      let btnO = document.getElementById('btnPerTipoOtro')
+      let inputO = document.getElementById('inputPerOtro')
+      // Reset all to inactive
+      let inactivo = (b) => { b.style.background = '#edf2fb'; b.style.color = '#1a4a8c'; b.style.borderColor = '#b0c8e8' }
+      let activo = (b) => { b.style.background = '#c9a84c'; b.style.color = '#0d1b2a'; b.style.borderColor = '#c9a84c' }
+      inactivo(btn4); inactivo(btn1); inactivo(btnO)
+      inputO.style.display = 'none'
+      if (tipo === 'PER4') {
+        tipoPer = 'PER4'; activo(btn4)
+      } else if (tipo === 'PER1') {
+        tipoPer = 'PER1'; activo(btn1)
+      } else {
+        activo(btnO); inputO.style.display = 'block'; inputO.focus()
+        let num = parseInt(inputO.value) || ''
+        tipoPer = num ? 'PER' + num : 'PER'
+      }
+      mostrarToast('Tipo seleccionado: ' + tipoPer)
+    }
+    function actualizarPerOtro(val) {
+      let num = parseInt(val)
+      tipoPer = num ? 'PER' + num : 'PER'
+    }
 
     function togglePlanFinca() {
       mostrarPlanFinca = !mostrarPlanFinca;
@@ -2888,7 +2925,7 @@
           let wb = XLSX.utils.book_new()
           let ws = XLSX.utils.json_to_sheet(limpiarParaExcel(datosVisibles))
           XLSX.utils.book_append_sheet(wb, ws, "Unificado")
-          XLSX.writeFile(wb, `Per4 ${sem} especifica por bloque.xlsx`)
+          XLSX.writeFile(wb, `${tipoPer} semana ${sem} especifica por bloque.xlsx`)
           mostrarToast('    Archivo descargado')
         } catch (e) {
           mostrarToast('Error al generar el archivo', 'error')
@@ -2959,7 +2996,7 @@
           let wb = XLSX.utils.book_new()
           let ws = XLSX.utils.json_to_sheet(data)
           XLSX.utils.book_append_sheet(wb, ws, "Historial")
-          XLSX.writeFile(wb, `Per4 ${sem} total final.xlsx`)
+          XLSX.writeFile(wb, `${tipoPer} semana ${sem} total final.xlsx`)
           mostrarToast('    Historial descargado')
         } catch (e) {
           console.error(e)
@@ -2997,7 +3034,7 @@
           let a = document.createElement("a");
           a.href = url;
           let semText = data.numSem ? ` (Semana ${data.numSem})` : "";
-          a.download = `trabajo realizado${semText}.json`;
+          a.download = `${tipoPer} trabajo realizado${semText}.json`;
           a.click();
           URL.revokeObjectURL(url);
           mostrarToast('     Copia de sesion descargada');
