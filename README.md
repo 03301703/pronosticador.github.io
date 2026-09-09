@@ -5,10 +5,10 @@ Sistema de pronostico de flores "El Trigal" desplegado como Progressive Web App 
 ## Caracteristicas
 
 - 100% Funcional - Todas las funcionalidades del HTML original
-- Offline - Funciona sin internet (Service Worker)
+- Offline - Funciona sin internet (Service Worker + respaldo local)
+- Nube compartida - Sincroniza la sesion de trabajo con Supabase para que varios dispositivos vean los mismos datos
 - Instalable - Se instala como app nativa en movil/desktop
 - Rapido - Caching inteligente de recursos
-- Sin dependencias de servidor - Solo HTML, CSS, JavaScript
 
 ## Como usar
 
@@ -101,11 +101,10 @@ Todo se sincroniza entre pestanas y se mantiene entre sesiones.
 
 ## Privacidad
 
-- Todo es local
-- No se envian datos a servidores
-- No hay tracking
+- La sesion de trabajo (siembras, plan finca, ajustes) se sincroniza con un proyecto privado de Supabase para compartirla entre dispositivos
+- Sin internet, la app sigue funcionando con el respaldo local (IndexedDB) y sincroniza al reconectarse
+- No hay tracking de terceros
 - No hay publicidad
-- 100% privado
 
 ## Rendimiento
 
